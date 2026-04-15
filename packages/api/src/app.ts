@@ -1,0 +1,55 @@
+import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
+import Fastify from 'fastify';
+import type { Env } from './config.js';
+import postgresPlugin from './plugins/postgres.js';
+import redisPlugin from './plugins/redis.js';
+import { AppHttpError } from './utils/errors.js';
+
+export async function buildApp(config: Env) {
+  const app = Fastify({
+    trustProxy: true,
+    logger:
+      config.NODE_ENV === 'development'
+        ? {
+            level: 'debug',
+            transport: {
+              target: 'pino-pretty',
+              options: { translateTime: 'SYS:standard' },
+            },
+          }
+        : { level: 'info' },
+  });
+
+  app.decorate('config', config);
+
+  await app.register(helmet);
+  await app.register(cors, {
+    origin:
+      config.NODE_ENV === 'production'
+        ? config.FRONTEND_URL
+        : [config.FRONTEND_URL, 'http://localhost:3000'],
+    credentials: true,
+  });
+
+  await app.register(postgresPlugin);
+  await app.register(redisPlugin);
+
+  app.get('/health', async () => ({ ok: true as const }));
+
+  app.setErrorHandler((error, request, reply) => {
+    if (error instanceof AppHttpError) {
+      return reply.status(error.statusCode).send({
+        error: error.errorCode,
+        message: error.message,
+      });
+    }
+    request.log.error({ err: error }, 'Unhandled error');
+    return reply.status(500).send({
+      error: 'INTERNAL_ERROR',
+      message: 'Something went wrong on our end.',
+    });
+  });
+
+  return app;
+}

@@ -1,0 +1,17 @@
+{
+  "name": "sniply",
+  "private": true,
+  "workspaces": [
+    "packages/api",
+    "packages/frontend"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev -w @sniply/api",
+    "dev:frontend": "npm run dev -w @sniply/frontend",
+    "build": "npm run build -w @sniply/api && npm run build -w @sniply/frontend",
+    "test": "npm run test -w @sniply/api"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
