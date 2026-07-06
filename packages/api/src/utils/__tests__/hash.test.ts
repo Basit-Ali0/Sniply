@@ -1,17 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { hashApiKey, hashIp, hashPassword, verifyPassword } from '../hash.js';
-
-describe('hashApiKey', () => {
-  it('produces a 64-char lowercase hex digest', () => {
-    const digest = hashApiKey('sk_live_test');
-    expect(digest).toMatch(/^[0-9a-f]{64}$/);
-  });
-
-  it('is deterministic', () => {
-    expect(hashApiKey('same-key')).toBe(hashApiKey('same-key'));
-  });
-});
+import { hashIp, hashPassword, verifyPassword } from '../hash.js';
 
 describe('hashIp', () => {
   it('is deterministic for the same inputs', () => {

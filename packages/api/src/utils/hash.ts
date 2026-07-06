@@ -10,8 +10,9 @@ export function hashIp(rawIp: string, linkId: bigint, date: string): string {
   return crypto.createHash('sha256').update(payload, 'utf8').digest('hex');
 }
 
-export function hashApiKey(rawKey: string): string {
-  return crypto.createHash('sha256').update(rawKey, 'utf8').digest('hex');
+/** SHA-256 of raw IP only — used for `geo:{...}` cache keys (not stored in DB). */
+export function hashGeoCacheKey(rawIp: string): string {
+  return crypto.createHash('sha256').update(rawIp, 'utf8').digest('hex');
 }
 
 export async function hashPassword(raw: string): Promise<string> {

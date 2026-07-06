@@ -14,7 +14,19 @@ const postgresPlugin: FastifyPluginAsync = async (fastify) => {
     }
   );
 
+  const supabaseAdmin = createClient(
+    fastify.config.SUPABASE_URL,
+    fastify.config.SUPABASE_SERVICE_ROLE_KEY,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    }
+  );
+
   fastify.decorate('supabase', supabase);
+  fastify.decorate('supabaseAdmin', supabaseAdmin);
 };
 
 export default fp(postgresPlugin, {
