@@ -2,8 +2,15 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import Fastify from 'fastify';
 import type { Env } from './config.js';
+import apiScopePlugin from './plugins/apiScope.js';
+import bullmqPlugin from './plugins/bullmq.js';
 import postgresPlugin from './plugins/postgres.js';
 import redisPlugin from './plugins/redis.js';
+import websocketPlugin from './plugins/websocket.js';
+import qrRoutes from './routes/qr.js';
+import redirectRoutes from './routes/redirect.js';
+import unlockRoutes from './routes/unlock.js';
+import wsRoutes from './routes/ws.js';
 import { AppHttpError } from './utils/errors.js';
 
 export async function buildApp(config: Env) {
@@ -34,8 +41,16 @@ export async function buildApp(config: Env) {
 
   await app.register(postgresPlugin);
   await app.register(redisPlugin);
+  await app.register(bullmqPlugin);
+  await app.register(websocketPlugin);
 
   app.get('/health', async () => ({ ok: true as const }));
+
+  await app.register(unlockRoutes);
+  await app.register(apiScopePlugin, { prefix: '/api' });
+  await app.register(redirectRoutes);
+  await app.register(qrRoutes);
+  await app.register(wsRoutes);
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof AppHttpError) {

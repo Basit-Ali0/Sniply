@@ -1,10 +1,18 @@
 import { loadEnv } from './config.js';
 import { buildApp } from './app.js';
+import { startWorker } from './workers/clickWorker.js';
 
 const config = loadEnv();
 const app = await buildApp(config);
 
+const worker = startWorker({
+  redis: app.redis,
+  supabase: app.supabase,
+  geoipApiUrl: config.GEOIP_API_URL,
+});
+
 const shutdown = async (): Promise<void> => {
+  await worker.close();
   await app.close();
 };
 
