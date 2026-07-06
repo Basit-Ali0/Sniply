@@ -65,7 +65,7 @@ Follow this sequence exactly. Do not skip phases or build features out of order.
 - [ ] Environment variable validation at startup (zod)
 - [ ] PostgreSQL plugin + Supabase connection
 - [ ] Redis plugin + Upstash connection
-- [ ] Run database migrations (create `links`, `users`, `click_events` tables)
+- [ ] Run database migrations (create `links`, `click_events` tables)
 - [ ] `base62.ts` utility + unit tests
 - [ ] `hash.ts` utility (SHA-256 + bcrypt) + unit tests
 
@@ -74,7 +74,7 @@ Follow this sequence exactly. Do not skip phases or build features out of order.
 - [ ] `GET /:code` — redirect route, Redis-first, cache miss fallback, 302 response
 - [ ] BullMQ queue setup (`clickQueue`)
 - [ ] Click worker (`clickWorker.ts`) — geo lookup, unique detection, DB write
-- [ ] Auth middleware (`X-API-Key` validation hook)
+- [ ] Auth middleware (Bearer JWT validation hook)
 - [ ] Rate limiting middleware (Redis-backed, 10 shortens/min)
 
 ### Phase 3 — Link Management API
@@ -123,7 +123,6 @@ These are the most important rules from `IMPLEMENTATION_RULES.md`. Full rules ar
 
 **Security — absolute:**
 - Never store or log a raw IP address. SHA-256 hash only.
-- Never store the raw API key. SHA-256 hash only.
 - Link passwords stored as bcrypt hash (cost factor 12).
 - HTTPS only in production. `trustProxy: true` on Render.
 

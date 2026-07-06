@@ -68,7 +68,6 @@ The repository is a monorepo with two packages. Do not merge them into a single 
 | Constants | UPPER_SNAKE_CASE | `MAX_CLICKS_DEFAULT`, `REDIS_TTL_GEO` |
 | TypeScript interfaces | PascalCase | `Link`, `ClickEvent`, `ApiResponse` |
 | TypeScript types | PascalCase | `ShortCode`, `IsoTimestamp` |
-| Database columns | snake_case | `click_count`, `expiry_at`, `user_id` |
 | Redis keys | lowercase with colons | `link:x9k2p`, `geo:{ip_hash}` |
 | API response fields | snake_case | `short_url`, `created_at`, `max_clicks` |
 | Environment variables | UPPER_SNAKE_CASE | `DATABASE_URL`, `REDIS_TOKEN` |
@@ -205,7 +204,7 @@ Follow the key schema exactly as defined in the System Design. Do not invent new
 link:{code}              → Hash — redirect cache
 geo:{ip_hash}            → String — cached geo result
 uniq:{link_id}:{date}    → Set — unique click tracking
-rl:{api_key_hash}:{min}  → String — rate limit counter
+rl:{user_id}:{min}       → String — rate limit counter
 ```
 
 ### TTLs
@@ -242,12 +241,10 @@ These rules are absolute. The agent must not deviate from them under any circums
 - Never log or return the raw password or hash in any API response.
 - `password_protected: true` is the only password-related field in any API response.
 
-### API Keys
+### Auth & JWTs
 
-- API keys are generated as `sk_live_` + 32 random hex bytes (`crypto.randomBytes(32).toString('hex')`).
-- Only the SHA-256 hash of the API key is stored in the `users` table.
-- The raw API key is shown to the user exactly once (at creation) and never again.
-- Validate API keys by hashing the incoming key and comparing to the stored hash. Never store or compare raw keys.
+- User authentication is handled by Supabase Auth using Bearer JWTs.
+- Never log or expose raw JWT tokens.
 
 ### HTTPS
 
@@ -400,7 +397,7 @@ Fastify uses Pino for logging by default. Do not replace or disable it.
 ### What to Never Log
 
 - Raw IP addresses.
-- Raw API keys.
+- Raw JWT tokens.
 - Password fields (raw or hashed).
 - Full request bodies on routes that accept sensitive data (`POST /api/shorten` — log only the code and url, not password).
 
@@ -450,7 +447,6 @@ This is the hard stop list. If asked to do any of these, refuse and flag it.
 | Call the database from a route handler directly | All DB access goes through services |
 | Use Next.js API routes for backend logic | Backend is Fastify only |
 | Create a new Redis key pattern not in the System Design | Document it first |
-| Store the raw API key in the database | Hash it (SHA-256) before storing |
 | `await` the click queue job in the redirect route | Blocks the response — kills the <5ms target |
 | Use `origin: '*'` for CORS in production | Security violation |
 | Send a stack trace or internal error to the client | Return `INTERNAL_ERROR` and log internally |

@@ -2,7 +2,7 @@
 
 > Base URL: `https://api.snip.ly`  
 > All requests and responses use `Content-Type: application/json` unless noted.  
-> Authentication via `X-API-Key` header on all `/api/*` routes.  
+> Authentication via `Authorization: Bearer <token>` header on all `/api/*` routes.  
 > Public redirect endpoint (`GET /:code`) requires no auth.
 
 ---
@@ -26,10 +26,10 @@
 
 ## Authentication
 
-All `/api/*` endpoints require an API key passed as a header.
+All `/api/*` endpoints require a Bearer token (JWT) passed as a header.
 
 ```
-X-API-Key: sk_live_xxxxxxxxxxxxxxxx
+Authorization: Bearer eyJ...
 ```
 
 Missing or invalid key returns:
@@ -38,7 +38,7 @@ Missing or invalid key returns:
 HTTP 401
 {
   "error": "UNAUTHORIZED",
-  "message": "Missing or invalid API key"
+  "message": "Missing or invalid authentication token"
 }
 ```
 
@@ -52,7 +52,7 @@ Create a new short link.
 
 ```
 POST /api/shorten
-X-API-Key: sk_live_xxx
+Authorization: Bearer <token>
 Content-Type: application/json
 ```
 
@@ -165,7 +165,7 @@ List all links belonging to the authenticated user.
 
 ```
 GET /api/links?page=1&limit=20&status=active
-X-API-Key: sk_live_xxx
+Authorization: Bearer <token>
 ```
 
 | Query Param | Type | Default | Description |
@@ -212,7 +212,7 @@ Get a single link by its short code.
 
 ```
 GET /api/links/x9k2p
-X-API-Key: sk_live_xxx
+Authorization: Bearer <token>
 ```
 
 **Response 200**
@@ -249,7 +249,7 @@ Get analytics for a specific link.
 
 ```
 GET /api/links/x9k2p/stats?from=2026-04-01T00:00:00Z&to=2026-04-15T23:59:59Z
-X-API-Key: sk_live_xxx
+Authorization: Bearer <token>
 ```
 
 | Query Param | Type | Required | Description |
@@ -300,7 +300,7 @@ Update a link's properties. Only the fields you send are updated.
 
 ```
 PATCH /api/links/x9k2p
-X-API-Key: sk_live_xxx
+Authorization: Bearer <token>
 Content-Type: application/json
 ```
 
@@ -351,7 +351,7 @@ Permanently delete a link and all its click event history.
 
 ```
 DELETE /api/links/x9k2p
-X-API-Key: sk_live_xxx
+Authorization: Bearer <token>
 ```
 
 **Response 204 — No Content**
@@ -402,11 +402,11 @@ Real-time click event stream. Connect once per dashboard session. Subscribe to i
 
 ```
 wss://api.snip.ly/ws
-X-API-Key: sk_live_xxx  ← sent as query param since WS headers are limited
+?token=eyJ...  ← sent as query param since WS headers are limited
 ```
 
 ```
-wss://api.snip.ly/ws?api_key=sk_live_xxx
+wss://api.snip.ly/ws?token=eyJ...
 ```
 
 ---
@@ -507,8 +507,8 @@ All error responses follow this shape:
 
 | Code | HTTP Status | Meaning |
 |---|---|---|
-| `UNAUTHORIZED` | 401 | Missing or invalid API key |
-| `FORBIDDEN` | 403 | Valid key but no access to this resource |
+| `UNAUTHORIZED` | 401 | Missing or invalid authentication token |
+| `FORBIDDEN` | 403 | Valid token but no access to this resource |
 | `LINK_NOT_FOUND` | 404 | Short code does not exist |
 | `LINK_EXPIRED` | 410 | Link has passed expiry_at |
 | `CLICK_LIMIT_REACHED` | 410 | Link has hit max_clicks |

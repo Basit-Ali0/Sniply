@@ -1,0 +1,190 @@
+{
+  "main": {
+    "id": "aae4eb61fc0915a9",
+    "type": "split",
+    "children": [
+      {
+        "id": "b9c3e4fee8498d1c",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "04ee3779f378db8c",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Graph view"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "031ce92de598675d",
+    "type": "split",
+    "children": [
+      {
+        "id": "b58601c769f1d797",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "d10c61d8d49491d3",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "d857f8da10edceef",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "96562cb2794e22b9",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "86f6b460ba8c3451",
+    "type": "split",
+    "children": [
+      {
+        "id": "04c158796ddcfb93",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "928ad7af04498339",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "API_CONTRACTS.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for API_CONTRACTS"
+            }
+          },
+          {
+            "id": "c58b11482d047b39",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "API_CONTRACTS.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from API_CONTRACTS"
+            }
+          },
+          {
+            "id": "8ce057c8d4095379",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "c696cd440d1c5b2c",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "efcd5f50ff4a862d",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "API_CONTRACTS.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of API_CONTRACTS"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "04ee3779f378db8c",
+  "lastOpenFiles": [
+    "API_CONTRACTS.md",
+    "SYSTEM_DESIGN.md",
+    "PRD.md",
+    "IMPLEMENTATION_RULES.md",
+    "AGENT_BRIEFING.md"
+  ]
+}

@@ -62,7 +62,7 @@ Both services are stateless. All shared state lives in PostgreSQL (Supabase) and
 | WebSocket | **Fastify WebSocket plugin** (`@fastify/websocket`) | Native WS within the Fastify server, no separate process |
 | Geo IP | **ip-api.com** | Free tier, 45 req/min, country-level resolution |
 | QR Codes | **qrcode** (npm) | Lightweight, PNG + SVG output, no external service |
-| Auth | **API Key** (custom, `X-API-Key` header) | Simple, stateless, no OAuth overhead for v1 |
+| Auth | **Supabase OAuth (JWT)** | Secure, session-based auth using Supabase Auth (GitHub, Google, etc.) |
 | Hashing | **bcrypt** (passwords), **SHA-256** (IPs) | bcrypt for safe password comparison; SHA-256 for IP anonymisation |
 | Logging | **Pino** (built into Fastify) | Structured JSON logs, fast, zero config |
 
@@ -98,8 +98,8 @@ packages/api
 │   │   ├── geoService.ts       # ip-api.com lookup + Redis cache
 │   │   └── qrService.ts        # QR code generation
 │   ├── middleware/
-│   │   ├── auth.ts             # X-API-Key validation hook
-│   │   └── rateLimit.ts        # Redis-backed rate limiter
+│   │   ├── auth.ts             # Bearer JWT validation hook
+│   │   └── rateLimit.ts        # Redis-backed rate limiter (user_id)
 │   └── utils/
 │       ├── base62.ts           # encode(id) → short code
 │       ├── hash.ts             # sha256(ip), bcrypt helpers
@@ -143,19 +143,12 @@ packages/frontend
 ### 4.1 PostgreSQL Schema
 
 ```sql
--- Users table (v1: API key auth only, no OAuth)
-CREATE TABLE users (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  api_key_hash TEXT NOT NULL UNIQUE,   -- SHA-256 of the raw API key
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
 -- Links table
 CREATE TABLE links (
   id            BIGSERIAL PRIMARY KEY,           -- Source for Base62 code
   code          TEXT NOT NULL UNIQUE,            -- Base62 encoded id OR custom slug
   long_url      TEXT NOT NULL,                   -- Max 2048 chars enforced in app
-  user_id       UUID REFERENCES users(id),       -- NULL = anonymous link
+  user_id       UUID REFERENCES auth.users(id) ON DELETE CASCADE, -- NULL = anonymous link
   active        BOOLEAN NOT NULL DEFAULT true,
   click_count   BIGINT NOT NULL DEFAULT 0,       -- Denormalized, updated by worker
   expiry_at     TIMESTAMPTZ,                     -- NULL = no expiry
@@ -224,7 +217,7 @@ If `SADD` returns 1 → new unique visitor. If 0 → already seen today.
 | `link:{code}` | Hash | Matches `expiry_at` or indefinite | Redirect hot path cache |
 | `geo:{ip_hash}` | String | 24 hours | Cached country lookup per IP hash |
 | `uniq:{link_id}:{date}` | Set | 48 hours | Unique click tracking per link per day |
-| `rl:{api_key_hash}:{minute}` | String (INCR) | 60 seconds | Rate limiting — 10 shortens/min |
+| `rl:{user_id}:{minute}` | String (INCR) | 60 seconds | Rate limiting — 10 shortens/min |
 | `bull:{queue}:*` | BullMQ internal | Managed by BullMQ | Job queue state |
 
 ### 5.2 Redirect Cache Entry
@@ -318,9 +311,9 @@ BullMQ Worker finishes processing click
 ### 7.3 Connection Lifecycle
 
 ```
-Client connects → wss://api.snip.ly/ws?api_key=sk_live_xxx
+Client connects → wss://api.snip.ly/ws?token=eyJ...
   │
-  ├─► Validate api_key → 401 close if invalid
+  ├─► Validate JWT token via Supabase → 401 close if invalid
   ├─► Connection accepted
   │
   ├─► Client sends: { type: "subscribe", code: "x9k2p" }
@@ -365,7 +358,7 @@ GET /x9k2p
 
 ```
 POST /api/shorten
-  ├─► Validate X-API-Key → users table
+  ├─► Validate Bearer JWT → auth.users
   ├─► Validate request body (Fastify schema)
   ├─► Check Safe Browsing (if URL_BLOCKED list — v1: blocklist in env)
   ├─► INSERT INTO links (long_url, user_id, expiry_at, max_clicks, password_hash)
@@ -409,10 +402,10 @@ GET /x9k2p
 
 ```
 DATABASE_URL=postgresql://...         # Supabase connection string
+SUPABASE_URL=https://...              # Supabase project URL
+SUPABASE_SERVICE_ROLE_KEY=...         # Supabase service role key
 REDIS_URL=redis://...                 # Upstash Redis URL
 REDIS_TOKEN=...                       # Upstash auth token
-JWT_SECRET=...                        # Not used v1, reserved
-API_KEY_SALT=...                      # Salt for API key hashing
 PORT=3001
 NODE_ENV=production
 GEOIP_API_URL=http://ip-api.com/json  # Base URL for geo lookups
@@ -422,6 +415,8 @@ FRONTEND_URL=https://snip.ly          # For CORS origin
 **Frontend (.env.local)**
 
 ```
+NEXT_PUBLIC_SUPABASE_URL=https://...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 NEXT_PUBLIC_API_URL=https://api.snip.ly
 NEXT_PUBLIC_WS_URL=wss://api.snip.ly/ws
 ```
