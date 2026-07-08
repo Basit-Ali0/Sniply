@@ -346,24 +346,24 @@ export async function getLinkByCodeAndUser(
   return data as LinkRow | null;
 }
 
+/**
+ * Count distinct IP hashes for a link via the `count_unique_clicks` Postgres RPC
+ * (migration 004). Runs `COUNT(DISTINCT ip_hash)` in the database instead of
+ * loading every click_events row into Node memory.
+ */
 export async function countUniqueClicks(
   supabase: SupabaseClient,
   linkId: string
 ): Promise<number> {
-  const { data, error } = await supabase
-    .from('click_events')
-    .select('ip_hash')
-    .eq('link_id', Number(linkId));
+  const { data, error } = await supabase.rpc('count_unique_clicks', {
+    p_link_id: Number(linkId),
+  });
 
   if (error) {
     throw createError('INTERNAL_ERROR', 'Failed to count unique clicks.', 500);
   }
 
-  const unique = new Set<string>();
-  for (const row of data ?? []) {
-    if (row.ip_hash) unique.add(row.ip_hash);
-  }
-  return unique.size;
+  return typeof data === 'number' ? data : Number(data ?? 0);
 }
 
 export async function updateLink(
