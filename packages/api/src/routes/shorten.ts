@@ -27,6 +27,30 @@ const shortenBodySchema = {
   },
 } as const;
 
+const shortenResponseSchema = {
+  type: 'object',
+  required: [
+    'code',
+    'short_url',
+    'long_url',
+    'qr_url',
+    'created_at',
+    'expiry_at',
+    'max_clicks',
+    'password_protected',
+  ],
+  properties: {
+    code: { type: 'string' },
+    short_url: { type: 'string' },
+    long_url: { type: 'string' },
+    qr_url: { type: 'string' },
+    created_at: { type: 'string' },
+    expiry_at: { type: ['string', 'null'] },
+    max_clicks: { type: ['integer', 'null'] },
+    password_protected: { type: 'boolean' },
+  },
+} as const;
+
 const shortenRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post(
     '/shorten',
@@ -34,6 +58,7 @@ const shortenRoutes: FastifyPluginAsync = async (fastify) => {
       preHandler: [rateLimitShortenPreHandler],
       schema: {
         body: shortenBodySchema,
+        response: { 201: shortenResponseSchema },
       },
     },
     async (request, reply) => {

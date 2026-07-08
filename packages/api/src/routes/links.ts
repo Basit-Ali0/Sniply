@@ -13,6 +13,89 @@ import {
 } from '../services/linkService.js';
 import { createError } from '../utils/errors.js';
 
+/**
+ * Response schemas for the link routes. Kept here (rather than in the service)
+ * because they describe the HTTP wire shape, which is a route-layer concern.
+ * Matches `formatLinkResponse` / `formatLinkDetailResponse` field-for-field.
+ */
+const linkResponseSchema = {
+  type: 'object',
+  required: [
+    'code',
+    'short_url',
+    'long_url',
+    'click_count',
+    'active',
+    'created_at',
+    'expiry_at',
+    'max_clicks',
+    'password_protected',
+  ],
+  properties: {
+    code: { type: 'string' },
+    short_url: { type: 'string' },
+    long_url: { type: 'string' },
+    click_count: { type: 'integer' },
+    active: { type: 'boolean' },
+    created_at: { type: 'string' },
+    expiry_at: { type: ['string', 'null'] },
+    max_clicks: { type: ['integer', 'null'] },
+    password_protected: { type: 'boolean' },
+  },
+} as const;
+
+const linkDetailResponseSchema = {
+  type: 'object',
+  required: [
+    'code',
+    'short_url',
+    'long_url',
+    'click_count',
+    'unique_clicks',
+    'active',
+    'created_at',
+    'expiry_at',
+    'max_clicks',
+    'password_protected',
+    'qr_url',
+  ],
+  properties: {
+    ...linkResponseSchema.properties,
+    unique_clicks: { type: 'integer' },
+    qr_url: { type: 'string' },
+  },
+} as const;
+
+const linkListResponseSchema = {
+  type: 'object',
+  required: ['links', 'pagination'],
+  properties: {
+    links: { type: 'array', items: linkResponseSchema },
+    pagination: {
+      type: 'object',
+      required: ['page', 'limit', 'total', 'total_pages'],
+      properties: {
+        page: { type: 'integer' },
+        limit: { type: 'integer' },
+        total: { type: 'integer' },
+        total_pages: { type: 'integer' },
+      },
+    },
+  },
+} as const;
+
+const linkUpdateResponseSchema = {
+  type: 'object',
+  required: ['code', 'short_url', 'long_url', 'active', 'updated_at'],
+  properties: {
+    code: { type: 'string' },
+    short_url: { type: 'string' },
+    long_url: { type: 'string' },
+    active: { type: 'boolean' },
+    updated_at: { type: 'string' },
+  },
+} as const;
+
 const linkRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     '/links',
@@ -28,6 +111,7 @@ const linkRoutes: FastifyPluginAsync = async (fastify) => {
             order: { type: 'string', enum: ['asc', 'desc'], default: 'desc' },
           },
         },
+        response: { 200: linkListResponseSchema },
       },
     },
     async (request, _reply) => {
@@ -71,6 +155,7 @@ const linkRoutes: FastifyPluginAsync = async (fastify) => {
             code: { type: 'string', minLength: 1 },
           },
         },
+        response: { 200: linkDetailResponseSchema },
       },
     },
     async (request) => {
@@ -113,6 +198,7 @@ const linkRoutes: FastifyPluginAsync = async (fastify) => {
             max_clicks: { type: ['integer', 'null'], minimum: 1 },
           },
         },
+        response: { 200: linkUpdateResponseSchema },
       },
     },
     async (request) => {

@@ -9,6 +9,9 @@ const qrRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     '/qr/:code',
     {
+      // No 2xx response schema: returns raw image bytes (image/png or
+      // image/svg+xml), not JSON. Fastify skips JSON serialisation for
+      // non-JSON content types, so a response schema does not apply here.
       schema: {
         params: {
           type: 'object',

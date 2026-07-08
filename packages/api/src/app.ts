@@ -44,7 +44,18 @@ export async function buildApp(config: Env) {
   await app.register(bullmqPlugin);
   await app.register(websocketPlugin);
 
-  app.get('/health', async () => ({ ok: true as const }));
+  app.get('/health', {
+    // Response schema enables Fastify's fast-json-stringify for the health check.
+    schema: {
+      response: {
+        200: {
+          type: 'object',
+          required: ['ok'],
+          properties: { ok: { type: 'boolean' } },
+        },
+      },
+    },
+  }, async () => ({ ok: true as const }));
 
   await app.register(unlockRoutes);
   await app.register(apiScopePlugin, { prefix: '/api' });

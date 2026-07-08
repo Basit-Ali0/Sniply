@@ -23,6 +23,9 @@ const redirectRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     '/:code',
     {
+      // No 2xx response schema: the 302 sends an empty body with only a
+      // Location header (+ X-Cache / X-Response-Time). fast-json-stringify
+      // has nothing to serialise here, so a response schema would add no value.
       schema: {
         params: {
           type: 'object',

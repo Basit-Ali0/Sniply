@@ -5,6 +5,15 @@ import { getLinkByCode, parseRedisLinkFields } from '../services/linkService.js'
 import { createError } from '../utils/errors.js';
 import { verifyPassword } from '../utils/hash.js';
 
+/** Response schema for the frontend-only unlock endpoint. */
+const unlockResponseSchema = {
+  type: 'object',
+  required: ['long_url'],
+  properties: {
+    long_url: { type: 'string' },
+  },
+} as const;
+
 const unlockRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post(
     '/api/links/:code/unlock',
@@ -24,6 +33,7 @@ const unlockRoutes: FastifyPluginAsync = async (fastify) => {
             password: { type: 'string', minLength: 1 },
           },
         },
+        response: { 200: unlockResponseSchema },
       },
     },
     async (request, reply) => {
