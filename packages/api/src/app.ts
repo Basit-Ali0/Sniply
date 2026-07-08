@@ -44,6 +44,8 @@ export async function buildApp(config: Env) {
   await app.register(bullmqPlugin);
   await app.register(websocketPlugin);
 
+  app.get('/', async () => ({ name: 'Snip.ly API', status: 'running' }));
+
   app.get('/health', {
     // Response schema enables Fastify's fast-json-stringify for the health check.
     schema: {
