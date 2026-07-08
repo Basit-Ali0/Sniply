@@ -1,5 +1,4 @@
 import type { FastifyPluginAsync } from 'fastify';
-import fp from 'fastify-plugin';
 
 import { requireAuth } from '../middleware/auth.js';
 import linkRoutes from '../routes/links.js';
