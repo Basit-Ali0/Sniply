@@ -195,7 +195,14 @@ Custom slugs bypass this encoding and are stored directly in the `code` column. 
 
 ### 4.3 Unique Click Detection
 
-Raw IPs are never stored. To determine unique clicks, the worker computes `SHA-256(raw_ip + link_id + YYYY-MM-DD)` and checks a Redis SET per link per day:
+Raw IPs are never stored. Two distinct SHA-256 hashes are derived from the raw IP — they serve different purposes and are **not interchangeable**:
+
+| Hash | Input | Purpose | Stored where |
+|---|---|---|---|
+| **Unique-click fingerprint** | `SHA-256(raw_ip + link_id + YYYY-MM-DD)` | Per-link, per-day uniqueness (scoped + non-reversible) | `uniq:{link_id}:{date}` Redis SET (48h TTL) **and** `click_events.ip_hash` |
+| **Geo cache key** | `SHA-256(raw_ip)` | Per-IP geo lookup cache key (no link/date scoping needed) | `geo:{...}` Redis key only (24h TTL) — **never persisted to the DB** |
+
+The fingerprint includes `link_id` and date so it cannot be correlated across links or days. The geo key is the raw IP hash alone because geo resolution is independent of which link was clicked — including `link_id`/date would needlessly fragment the cache. Both are computed in the worker before any other operation; see `utils/hash.ts` (`hashIp` vs. `hashGeoCacheKey`).
 
 ```
 Key:   uniq:{link_id}:{YYYY-MM-DD}
@@ -215,8 +222,8 @@ If `SADD` returns 1 → new unique visitor. If 0 → already seen today.
 | Key Pattern | Type | TTL | Purpose |
 |---|---|---|---|
 | `link:{code}` | Hash | Matches `expiry_at` or indefinite | Redirect hot path cache |
-| `geo:{ip_hash}` | String | 24 hours | Cached country lookup per IP hash |
-| `uniq:{link_id}:{date}` | Set | 48 hours | Unique click tracking per link per day |
+| `geo:{ip_hash}` | String | 24 hours | Cached country lookup per IP. `ip_hash = SHA-256(raw_ip)` — distinct from the per-link-per-day click fingerprint (see §4.3) |
+| `uniq:{link_id}:{date}` | Set | 48 hours | Unique click tracking per link per day. Value is `SHA-256(raw_ip + link_id + YYYY-MM-DD)` |
 | `rl:{user_id}:{minute}` | String (INCR) | 60 seconds | Rate limiting — 10 shortens/min |
 | `bull:{queue}:*` | BullMQ internal | Managed by BullMQ | Job queue state |
 
