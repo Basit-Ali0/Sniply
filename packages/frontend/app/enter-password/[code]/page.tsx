@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+import { api, ApiError } from '../../../lib/api';
 
 export default function EnterPasswordPage() {
   const { code } = useParams<{ code: string }>();
@@ -19,24 +19,12 @@ export default function EnterPasswordPage() {
     setError('');
 
     try {
-      const res = await fetch(
-        `${API_URL}/api/links/${encodeURIComponent(code)}/unlock`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password }),
-        }
-      );
-
-      if (res.ok) {
-        const data = await res.json();
-        window.location.href = data.long_url;
-      } else {
-        const err = await res.json();
-        setError(err.message ?? 'Invalid password');
-      }
-    } catch {
-      setError('Failed to verify password');
+      const data = await api.unlock(code, password);
+      window.location.href = data.long_url;
+    } catch (err: unknown) {
+      // ApiError carries the server's message (e.g. "Incorrect password.");
+      // anything else is a network failure.
+      setError(err instanceof ApiError ? err.message : 'Failed to verify password');
     } finally {
       setLoading(false);
     }
