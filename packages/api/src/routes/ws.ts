@@ -1,9 +1,16 @@
 import type { FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
+import { WebSocket } from 'ws';
 
+import { countUniqueClicks } from '../services/linkService.js';
 import { wsEmitter } from '../utils/wsEmitter.js';
 
-const rooms = new Map<string, Set<any>>();
+/**
+ * Per-code subscription rooms. Each value is the set of connected WebSocket
+ * clients subscribed to that short code. Typed as `ws.WebSocket` (re-exported
+ * by @fastify/websocket) — never `any`.
+ */
+const rooms = new Map<string, Set<WebSocket>>();
 
 const wsRoutesPlugin: FastifyPluginAsync = async (fastify) => {
   wsEmitter.on('click_event', (payload) => {
@@ -11,7 +18,7 @@ const wsRoutesPlugin: FastifyPluginAsync = async (fastify) => {
     if (clients) {
       const message = JSON.stringify({ type: 'click_event', ...payload });
       clients.forEach((client) => {
-        if (client.readyState === 1) {
+        if (client.readyState === WebSocket.OPEN) {
           client.send(message);
         }
       });
@@ -23,7 +30,7 @@ const wsRoutesPlugin: FastifyPluginAsync = async (fastify) => {
     if (clients) {
       const message = JSON.stringify({ type: 'link_updated', ...payload });
       clients.forEach((client) => {
-        if (client.readyState === 1) {
+        if (client.readyState === WebSocket.OPEN) {
           client.send(message);
         }
       });
@@ -35,7 +42,7 @@ const wsRoutesPlugin: FastifyPluginAsync = async (fastify) => {
     if (clients) {
       const message = JSON.stringify({ type: 'link_deleted', ...payload });
       clients.forEach((client) => {
-        if (client.readyState === 1) {
+        if (client.readyState === WebSocket.OPEN) {
           client.send(message);
         }
       });
@@ -46,88 +53,76 @@ const wsRoutesPlugin: FastifyPluginAsync = async (fastify) => {
     const { token } = request.query as { token?: string };
 
     if (!token) {
-      connection.socket.send(JSON.stringify({ type: 'error', message: 'Missing authentication token' }));
-      connection.socket.close(4001, 'Unauthorized');
+      connection.send(JSON.stringify({ type: 'error', message: 'Missing authentication token' }));
+      connection.close(4001, 'Unauthorized');
       return;
     }
 
     const { data, error } = await fastify.supabaseAdmin.auth.getUser(token);
 
     if (error || !data?.user?.id) {
-      connection.socket.send(JSON.stringify({ type: 'error', message: 'Invalid authentication token' }));
-      connection.socket.close(4001, 'Unauthorized');
+      connection.send(JSON.stringify({ type: 'error', message: 'Invalid authentication token' }));
+      connection.close(4001, 'Unauthorized');
       return;
     }
 
     const userId = data.user.id;
     const subscriptions = new Set<string>();
 
-    connection.socket.on('message', async (messageBuffer: Buffer) => {
+    connection.on('message', async (messageBuffer: Buffer) => {
       try {
         const payload = JSON.parse(messageBuffer.toString());
-        
+
         if (payload.type === 'subscribe' && payload.code) {
           const { code } = payload;
+
+          // Single link query — fetch id + click_count in one round-trip.
           const { data: link } = await fastify.supabase
             .from('links')
-            .select('click_count')
+            .select('id, click_count')
             .eq('code', code)
             .eq('user_id', userId)
             .maybeSingle();
 
           if (!link) {
-            connection.socket.send(JSON.stringify({ type: 'error', message: 'Link not found or access denied' }));
+            connection.send(JSON.stringify({ type: 'error', message: 'Link not found or access denied' }));
             return;
           }
 
-          // Let's refetch link with id
-          const { data: fullLink } = await fastify.supabase
-            .from('links')
-            .select('id, click_count')
-            .eq('code', code)
-            .eq('user_id', userId)
-            .single();
-
-          let uniqueClicks = 0;
-          if (fullLink) {
-             const { data: uniqueEvents } = await fastify.supabase
-               .from('click_events')
-               .select('ip_hash')
-               .eq('link_id', Number(fullLink.id));
-             const unique = new Set<string>();
-             for (const e of uniqueEvents ?? []) {
-               if (e.ip_hash) unique.add(e.ip_hash);
-             }
-             uniqueClicks = unique.size;
-          }
+          // Unique count via the count_unique_clicks RPC (COUNT(DISTINCT ip_hash)
+          // in Postgres) instead of loading every click_events row into memory.
+          const uniqueClicks = await countUniqueClicks(
+            fastify.supabase,
+            String(link.id)
+          );
 
           if (!rooms.has(code)) {
             rooms.set(code, new Set());
           }
-          rooms.get(code)!.add(connection.socket);
+          rooms.get(code)!.add(connection);
           subscriptions.add(code);
 
-          connection.socket.send(JSON.stringify({
+          connection.send(JSON.stringify({
             type: 'subscribed',
             code,
             current_stats: {
-              total_clicks: fullLink?.click_count ?? 0,
+              total_clicks: link.click_count ?? 0,
               unique_clicks: uniqueClicks,
             }
           }));
         } else if (payload.type === 'unsubscribe' && payload.code) {
           const { code } = payload;
-          rooms.get(code)?.delete(connection.socket);
+          rooms.get(code)?.delete(connection);
           subscriptions.delete(code);
         }
       } catch (err) {
-        connection.socket.send(JSON.stringify({ type: 'error', message: 'Malformed message' }));
+        connection.send(JSON.stringify({ type: 'error', message: 'Malformed message' }));
       }
     });
 
-    connection.socket.on('close', () => {
+    connection.on('close', () => {
       subscriptions.forEach((code) => {
-        rooms.get(code)?.delete(connection.socket);
+        rooms.get(code)?.delete(connection);
         if (rooms.get(code)?.size === 0) {
           rooms.delete(code);
         }
